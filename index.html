@@ -2386,7 +2386,14 @@ let API=BAKED?SERVER:'';try{API=API||localStorage.getItem('api')||'';}catch(e){}
 const TEACHER_PAGE='mypass2026';
 if(P.get('t')!==TEACHER_PAGE){$('T').classList.add('hide');$('nav').classList.add('hide');$('S').classList.remove('hide');
  if(!API&&P.get('a'))try{API=atob(P.get('a'));}catch(e){}}
-async function call(o){const r=await fetch(API+'?'+new URLSearchParams(o));return r.json();}
+async function call(o){
+ let r,t;
+ try{r=await fetch(API+'?'+new URLSearchParams(o));}
+ catch(e){throw new Error('NETWORK ('+e.message+') - the deployment is probably not set to "Anyone", or the URL is wrong');}
+ t=await r.text();
+ try{return JSON.parse(t);}
+ catch(e){throw new Error('BAD REPLY, HTTP '+r.status+': '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,160));}
+}
 const getPos=()=>new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>res(p.coords),rej,{enableHighAccuracy:true,timeout:15000}));
 const getPosOpt=()=>Promise.race([getPos().catch(()=>null),new Promise(r=>setTimeout(()=>r(null),6000))]);
 // ---- STUDENT ----
@@ -2401,7 +2408,7 @@ async function mark(){
   try{localStorage.setItem('sgrp',$('sg').value);localStorage.setItem('sname',name);}catch(e){}
   const r=await call({action:'mark',group:$('sg').value,name:name,code:code,lat:c?c.latitude:'',lon:c?c.longitude:'',acc:c?c.accuracy:'',dev:(localStorage.dev||(localStorage.dev=Math.random().toString(36).slice(2)))});
   m.textContent=r.msg;m.className='msg '+(r.ok?'ok':'no');}
- catch(e){m.textContent='Connection problem, try again';m.className='msg no';}
+ catch(e){m.textContent='Connection problem: '+e.message;m.className='msg no';}
 }
 // ---- TEACHER ----
 try{$('api').value=API;$('tapi').value=API;$('key').value=localStorage.getItem('key')||'';$('tkey').value=$('key').value;$('sub').value=localStorage.getItem('sub')||'';}catch(e){}
@@ -2418,7 +2425,7 @@ async function openSession(){
   $('setup').classList.add('hide');$('live').classList.remove('hide');
   $('lg').textContent='Group '+GRP;tick();poll();setTimeout(rot,20000);
   const _qr=qrcode(0,'M');_qr.addData(buildStudentLink());_qr.make();$('qrbox').innerHTML=_qr.createSvgTag({cellSize:5,margin:2});
- }catch(e){$('tm').textContent='Cannot reach the Web App URL';}
+ }catch(e){$('tm').textContent='Cannot reach the Web App URL: '+e.message;}
 }
 async function newCode(){const c=String(Math.floor(1000+Math.random()*9000));
  const r=await call({action:'open',key:KEY,group:GRP,subject:$('sub').value,code:c,sid:SID,end:END,lat:POS.latitude??'',lon:POS.longitude??''});
