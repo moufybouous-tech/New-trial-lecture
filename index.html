@@ -2331,16 +2331,18 @@ var qrcode = function() {
   <label>Web App URL (Apps Script)</label><input id="api" placeholder="https://script.google.com/macros/s/.../exec">
   <label>Teacher password</label><input id="key" type="password">
   <div class="row"><div><label>Group</label><select id="grp"></select></div>
-  <div><label>Session (min)</label><input id="min" type="number" value="15"></div></div>
-  <label>Subject</label><input id="sub" placeholder="e.g. Literature">
-  <button onclick="openSession()">Generate attendance code</button>
-  <div class="msg" id="tm"></div>
+  <div><label>Session no.</label><select id="ses"></select></div></div>
+  <div class="row"><div><label>Open for (min)</label><input id="min" type="number" value="15"></div>
+  <div><label>Subject</label><input id="sub" placeholder="e.g. Literature"></div></div>
+  <button onclick="openSession()">Open session &amp; show code</button>
+  <button class="g" onclick="showCodes()">Show the 10 codes of this group</button>
+  <div class="msg" id="tm"></div><div id="codes"></div>
  </div>
  <div class="c hide" id="live">
-  <div class="t">Code for <b id="lg"></b> · changes every 20 s — show it on the board only</div><div class="code" id="cd"></div>
+  <div class="t"><b id="lg"></b> · code (fixed for this session)</div><div class="code" id="cd"></div>
   <div class="t" id="tl"></div>
-  <div class="t" style="margin-top:10px">Scan once to open the check-in page, then type today's code</div>
-  <div id="qrbox" style="display:flex;justify-content:center;margin:8px 0"></div>
+  <div class="t" style="margin-top:10px">Students scan this QR: the group and code are filled in, they only pick their name. Each session has a different QR.</div>
+  <div id="qrbox" style="background:#fff;padding:14px;border-radius:12px;width:fit-content;margin:10px auto;line-height:0"></div>
   <button class="g" onclick="copyLink()">Copy student link (WhatsApp/Telegram)</button>
   <div class="msg t" id="cm"></div>
   <p><b id="cnt"></b></p><ul id="lst"></ul>
@@ -2364,7 +2366,7 @@ var qrcode = function() {
 </div><div class="c hide" id="tout"></div></div>
 </div>
 <script>
-// ---- Roster names (no student ID needed: students pick their name from their group list) ----
+// ---- Roster names (students pick their name from their group list, no student ID) ----
 const R={
 "1":"ABABSIA Salsabil|ABABSIA Lyna|ABBOUDI Meriem|ABDI Ahmed Yassine|AISSAOUI Sandra|AIT OUBELLI Anouar Amine|AMAMRIA Abdelaziz|AMARNIA Lina|AOUAMRIA Rahma|ARAIBIA Ilyas|ARGOUB Nada|ATEK Rahma|BACHA Manel Nour El Houda|BADI Aya|BEDAIRIA Nour El Yakine|BELFAR Mohammed Abdelhadi|BELGHIT Mohamed Abdelkadous|BELOUCIF Djena|BENAOUADI Isra|BENCHAABANE Yasser|BENGHIDA Feriel|BENNACER Nermine|BOUHENCHIR Rahma|CHAALANE Ayat Allah|CHAALENE Khaoula|CHABACA Belkis Doua|DERBAL Abdelaziz|DRIDI Ikhlas|FERAHNA Belgacem|GUEHRIA Aissa Abd El Moudjoud|GUELMANI Rahma|HABTOUN Selma|HACHAD Nardjes|HADFI Tahar|HAMADI Ritadj|HAMAIDIA Rahma|HANDEL Mohamed El Hadi|HELAIMIA Djihane|KEDADRIA Yahia|KELBOUZ Rachida|KHEMAISSIA Ines|LADJAILIA Amani|LADJAILIA Roumaissa|LIMAMI Ilhem|REDJAIBIA Amani|SAAIDIA Meriama Souha|TELAIDJIA Rayane|TEMIMI Mohammed Temim|TEMIMI Nourelyakine|YAHIA Grairia|YAHIA Mohamed Abderraouf|ZAALENE Malak Nour El Imene",
 "2":"BENDJEDID Fatma Zohra|BENDJERBOUH Riadh Abdel Djalil|BENFAIALA Abir|BENOUARET Serour|BENSOLA Khouloud|BENYAHIA Haithem|BENZINE Kenza|BERRIG Ines|BOUADJILA Ouissal|BOUAFIA Chaima|BOUKERDOUGHA Aya|BOULIFA Amel|BOUMAZA Khaled Amir|BOUMESHAD Amani|BOURBIA Esma|BOUROUINA Kinza|BOUSEBOUA Amani|CHEFFROUR Rayan|CHELLOUG Malak|CHERABCHA Khouloud|CHIHANI Wiame|EULMI Hadjer|HADFI Mohamed Amine|HADJI Abdelwahab|HAMAMDA Mohamed Baha Eddine|HARKAT Ranin|HEZAM Fatma Zohra|KANACHE Asma|KAREK Hibat Errahmane|KECHRADI Ikram|KERMICHE Doursaf Ichrak|KHAMMAR Latifa|KHARFI Aya|KHERAIF Safa|KHETRACHE Malak|KHOUAIDJIA Mallek|LABCHAKI Samira|LADJAILIA Chada Erihane|LAIB Meriem|LASLA Salsabil|LOULOU Oumaima|MADI Yousra|MAROUF Hadil|MEDJANI Rahma|MEDKOURI Wafaa|MESLEM Mohamed Kenzi|SAHTOUT Imene|SAI Douaa|SEDDOUR Isra|SISSAOUI Chahd",
@@ -2373,12 +2375,15 @@ const L=g=>R[g].split('|');
 const $=i=>document.getElementById(i), P=new URLSearchParams(location.search);
 const groupOpts=Object.keys(R).map(g=>`<option value="${g}">Group ${g}</option>`).join('');
 $('grp').innerHTML=groupOpts;$('sg').innerHTML=groupOpts;
+$('ses').innerHTML=Array.from({length:10},(_,i)=>`<option value="${i+1}">Session ${i+1}</option>`).join('');
 function fillNames(){const esc=s=>s.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
  $('sn').innerHTML='<option value="">— choose your name —</option>'+L($('sg').value).map(n=>`<option value="${esc(n)}">${n}</option>`).join('');}
 $('sg').onchange=fillNames;fillNames();
 try{const g=localStorage.getItem('sgrp');if(g&&R[g]){$('sg').value=g;fillNames();const n=localStorage.getItem('sname');if(n&&L(g).includes(n))$('sn').value=n;}}catch(e){}
+// QR link pre-fills group and code (each session has its own QR)
+if(P.get('g')&&R[P.get('g')]){const g2=P.get('g');$('sg').value=g2;fillNames();try{const n2=localStorage.getItem('sname');if(n2&&L(g2).includes(n2))$('sn').value=n2;}catch(e){}}
+if(/^\d{4}$/.test(P.get('c')||''))$('sc').value=P.get('c');
 function show(id){['T','S','X'].forEach(k=>$(k).classList.toggle('hide',k!==id));}
-// Optional: paste your NEW Apps Script /exec URL here so student links stay short. Leave as is to use the Teacher field instead.
 const SERVER='https://script.google.com/macros/s/AKfycbwwTViOX2GBK1XbW59M2vkPNsRBR0nPcHl8TUUnouh-tzz8GiSYeKxv5szZv1RzsbONpw/exec';
 const BAKED=SERVER.startsWith('https');
 let API=BAKED?SERVER:'';try{API=API||localStorage.getItem('api')||'';}catch(e){}
@@ -2386,14 +2391,18 @@ let API=BAKED?SERVER:'';try{API=API||localStorage.getItem('api')||'';}catch(e){}
 const TEACHER_PAGE='mypass2026';
 if(P.get('t')!==TEACHER_PAGE){$('T').classList.add('hide');$('nav').classList.add('hide');$('S').classList.remove('hide');
  if(!API&&P.get('a'))try{API=atob(P.get('a'));}catch(e){}}
-async function call(o){
- let r,t;
- try{r=await fetch(API+'?'+new URLSearchParams(o));}
- catch(e){throw new Error('NETWORK ('+e.message+') - the deployment is probably not set to "Anyone", or the URL is wrong');}
- t=await r.text();
- try{return JSON.parse(t);}
- catch(e){throw new Error('BAD REPLY, HTTP '+r.status+': '+t.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim().slice(0,160));}
-}
+// ---- Transport: JSONP (a script tag), which is not blocked by browser CORS / tracking rules ----
+function jsonp(url,o){return new Promise((res,rej)=>{
+ const cb='cb'+Date.now().toString(36)+Math.floor(Math.random()*1e6);
+ const s=document.createElement('script');let done=false;
+ const end=()=>{done=true;clearTimeout(tm);delete window[cb];s.remove();};
+ const tm=setTimeout(()=>{if(!done){end();rej(new Error('NO ANSWER from the script. Check the deployment: Execute as Me, Access Anyone, latest version.'));}},20000);
+ window[cb]=d=>{if(!done){end();res(d);}};
+ s.onerror=()=>{if(!done){end();rej(new Error('NETWORK: the script URL could not be loaded'));}};
+ s.onload=()=>setTimeout(()=>{if(!done){end();rej(new Error('BAD REPLY: Google returned a page instead of data (access is probably not "Anyone", or the code is not redeployed)'));}},1500);
+ s.src=url+'?'+new URLSearchParams(Object.assign({},o,{callback:cb}));
+ document.head.appendChild(s);});}
+const call=o=>jsonp(API,o);
 const getPos=()=>new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>res(p.coords),rej,{enableHighAccuracy:true,timeout:15000}));
 const getPosOpt=()=>Promise.race([getPos().catch(()=>null),new Promise(r=>setTimeout(()=>r(null),6000))]);
 // ---- STUDENT ----
@@ -2412,37 +2421,43 @@ async function mark(){
 }
 // ---- TEACHER ----
 try{$('api').value=API;$('tapi').value=API;$('key').value=localStorage.getItem('key')||'';$('tkey').value=$('key').value;$('sub').value=localStorage.getItem('sub')||'';}catch(e){}
-let CODE,SID,GRP,END,KEY,POS;
+let SID,GRP,SES,END,KEY,POS,CODEV;
 async function openSession(){
- API=$('api').value.trim();KEY=$('key').value;GRP=$('grp').value;
+ API=$('api').value.trim();KEY=$('key').value;GRP=$('grp').value;SES=$('ses').value;
  if(!API||!KEY||!$('sub').value){$('tm').textContent='Fill in URL, password and subject';return;}
- SID=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
- const m=Number($('min').value)||15;END=Date.now()+m*60000;$('tm').textContent='Opening…';
+ const m=Number($('min').value)||15;$('tm').textContent='Opening…';
  POS=(await getPosOpt())||{};
- try{const r=await newCode();
+ try{const r=await call({action:'start',key:KEY,group:GRP,session:SES,minutes:m,subject:$('sub').value,lat:POS.latitude??'',lon:POS.longitude??''});
   if(!r.ok){$('tm').textContent=r.msg;return;}
-  localStorage.setItem('api',API);localStorage.setItem('key',KEY);localStorage.setItem('sub',$('sub').value);
+  SID=r.sid;END=Number(r.end);CODEV=r.code;$('cd').textContent=r.code;
+  try{localStorage.setItem('api',API);localStorage.setItem('key',KEY);localStorage.setItem('sub',$('sub').value);}catch(e){}
   $('setup').classList.add('hide');$('live').classList.remove('hide');
-  $('lg').textContent='Group '+GRP;tick();poll();setTimeout(rot,20000);
-  const _qr=qrcode(0,'M');_qr.addData(buildStudentLink());_qr.make();$('qrbox').innerHTML=_qr.createSvgTag({cellSize:5,margin:2});
+  $('lg').textContent='Group '+GRP+' · Session '+SES;tick();poll();
+  try{const _qr=qrcode(0,'M');_qr.addData(buildStudentLink());_qr.make();$('qrbox').innerHTML=_qr.createSvgTag({cellSize:6,margin:0});}catch(e){$('qrbox').style.lineHeight='1.3';$('qrbox').style.color='#000';$('qrbox').textContent=buildStudentLink();}
  }catch(e){$('tm').textContent='Cannot reach the Web App URL: '+e.message;}
 }
-async function newCode(){const c=String(Math.floor(1000+Math.random()*9000));
- const r=await call({action:'open',key:KEY,group:GRP,subject:$('sub').value,code:c,sid:SID,end:END,lat:POS.latitude??'',lon:POS.longitude??''});
- if(r.ok){CODE=c;$('cd').textContent=c;}return r;}
-async function rot(){if(Date.now()>=END){$('cd').textContent='—';return;}try{await newCode();}catch(e){}setTimeout(rot,20000);}
+async function showCodes(){
+ API=$('api').value.trim();KEY=$('key').value;
+ if(!API||!KEY){$('tm').textContent='Fill in URL and password';return;}
+ try{const r=await jsonp(API,{action:'plan',key:KEY,group:$('grp').value});
+  if(!r.ok){$('tm').textContent=r.msg;return;}
+  $('tm').textContent='';
+  $('codes').innerHTML='<div class="t" style="margin-top:8px">Group '+$('grp').value+'</div>'+r.rows.map(x=>`<div class="t">Session ${x.session} : <b>${x.code}</b></div>`).join('');
+ }catch(e){$('tm').textContent='Cannot reach the Web App URL: '+e.message;}
+}
 function tick(){const s=Math.max(0,Math.round((END-Date.now())/1000));
- $('tl').textContent=s?`Expires in ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:'Expired';
+ const hh=new Date(END).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+ $('tl').textContent=s?`Check-in open until ${hh} · closes in ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`:'Check-in closed';
  if(s)setTimeout(tick,1000);}
 async function poll(){
- try{const r=await call({action:'list',key:KEY,group:GRP,sid:SID});
+ try{const r=await call({action:'list',key:KEY,sid:SID});
   if(r.ok){const p=new Set(r.names);
    $('cnt').textContent=`${p.size} present / ${L(GRP).length}`;
    $('lst').innerHTML=L(GRP).map(n=>`<li class="${p.has(n)?'p':'a'}">${p.has(n)?'✔':'·'} ${n}</li>`).join('');}
  }catch(e){}
  if(Date.now()<END+60000)setTimeout(poll,8000);
 }
-function buildStudentLink(){return location.origin+location.pathname+(BAKED?'':'?a='+btoa(API));}
+function buildStudentLink(){return location.origin+location.pathname+'?g='+GRP+'&c='+CODEV+(BAKED?'':'&a='+btoa(API));}
 function copyLink(){
  const u=buildStudentLink();
  (navigator.clipboard?navigator.clipboard.writeText(u):Promise.reject()).then(()=>$('cm').textContent='Link copied ✔',()=>{$('cm').textContent=u;});
@@ -2450,22 +2465,22 @@ function copyLink(){
 // ---- TEST ----
 const rows=[];
 function add(st,t,d){rows.push(`<div class="rr s-${st}"><div class="ri">${{ok:'✔',no:'✘',wn:'!'}[st]}</div><div><div class="rt">${t}</div><div class="rd">${d||''}</div></div></div>`);$('tout').innerHTML=rows.join('');}
-async function ping(key){const r=await fetch($('tapi').value.trim()+'?'+new URLSearchParams({action:'ping',key:key}));return r.json();}
 async function run(){
  rows.length=0;$('tout').classList.remove('hide');$('tout').innerHTML='Testing…';
  const u=$('tapi').value.trim();
- location.protocol==='https:'?add('ok','Page served over HTTPS','Location access will work for students.'):add('wn','Page not on HTTPS','Phones block location on plain http. Host on Netlify/GitHub Pages.');
+ location.protocol==='https:'?add('ok','Page served over HTTPS','Location access will work for students.'):add('wn','Page not on HTTPS','Phones block location on plain http.');
  if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\/]+\/exec$/.test(u)){add('no','URL format looks wrong','It must start with https://script.google.com/macros/s/ and end with /exec (no trailing slash, no spaces).');return;}
  add('ok','URL format is valid');
  let r;
- try{r=await ping('');}catch(e){add('no','Cannot reach the script','Check: deployed as Web app, "Execute as" = Me, "Who has access" = Anyone, and you used the /exec URL (not /dev). Open the URL in a browser tab: you should see JSON.');return;}
- if(!r||!r.ok){add('no','Script answered with an error',r&&r.msg||'Redeploy as a NEW version and check the code was pasted fully.');return;}
- add('ok','Script is reachable and running','This also created the Sessions, Attendance and Alerts tabs if missing.');
+ try{r=await jsonp(u,{action:'ping',key:''});}catch(e){add('no','Cannot reach the script',e.message);return;}
+ if(!r||!r.ok){add('no','Script answered with an error',r&&r.msg||'Redeploy a NEW version.');return;}
+ add('ok','Script is reachable and running','Sheet tabs Plan, Attendance and Alerts exist.');
+ add(r.plan>=30?'ok':'wn','Plan has '+r.plan+' sessions','Expected 30 (3 groups × 10 sessions).');
  try{localStorage.setItem('api',u);localStorage.setItem('key',$('tkey').value);}catch(e){}
- try{r=await ping($('tkey').value);}catch(e){add('no','Second call failed');return;}
+ try{r=await jsonp(u,{action:'ping',key:$('tkey').value});}catch(e){add('no','Second call failed',e.message);return;}
  if(!r.auth){add('no','Wrong password','It must match TEACHER_KEY in the script. After editing it, redeploy a new version.');return;}
  add('ok','Password accepted');
- if(r.tz)add('ok','Script time zone: '+r.tz,'Dates/times in the Sheet use this zone. Change it in Apps Script Project Settings if wrong.');
+ if(r.tz)add('ok','Script time zone: '+r.tz);
  add('ok','Allowed radius is '+r.radius+' m');
  if(!navigator.geolocation){add('no','No geolocation on this device');return;}
  add('wn','Checking location…','Tap Allow when your browser asks.');
