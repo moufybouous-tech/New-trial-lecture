@@ -2384,7 +2384,7 @@ try{const g=localStorage.getItem('sgrp');if(g&&R[g]){$('sg').value=g;fillNames()
 if(P.get('g')&&R[P.get('g')]){const g2=P.get('g');$('sg').value=g2;fillNames();try{const n2=localStorage.getItem('sname');if(n2&&L(g2).includes(n2))$('sn').value=n2;}catch(e){}}
 if(/^\d{4}$/.test(P.get('c')||''))$('sc').value=P.get('c');
 function show(id){['T','S','X'].forEach(k=>$(k).classList.toggle('hide',k!==id));}
-const SERVER='https://script.google.com/macros/s/AKfycbwwTViOX2GBK1XbW59M2vkPNsRBR0nPcHl8TUUnouh-tzz8GiSYeKxv5szZv1RzsbONpw/exec';
+const SERVER='https://script.google.com/macros/s/AKfycbzwFyD7Zo0TBsyd7dQasw7g0GaaqnrU83koRyaZK2rdgiI23jQZ-IZIJNMRjVeGADawhg/exec';
 const BAKED=SERVER.startsWith('https');
 let API=BAKED?SERVER:'';try{API=API||localStorage.getItem('api')||'';}catch(e){}
 // ---- Plain address = Student screen only. Teacher/Test tabs open only at  ?t=<TEACHER_PAGE> ----
@@ -2474,7 +2474,7 @@ async function run(){
  let r;
  try{r=await jsonp(u,{action:'ping',key:''});}catch(e){add('no','Cannot reach the script',e.message);return;}
  if(!r||!r.ok){add('no','Script answered with an error',r&&r.msg||'Redeploy a NEW version.');return;}
- add('ok','Script is reachable and running','Sheet tabs Plan, Attendance and Alerts exist.');
+ add('ok','Script is reachable and running','Sheet tabs Codes, Sessions, Attendance, Devices and Alerts exist.');
  add(r.plan>=30?'ok':'wn','Plan has '+r.plan+' sessions','Expected 30 (3 groups × 10 sessions).');
  try{localStorage.setItem('api',u);localStorage.setItem('key',$('tkey').value);}catch(e){}
  try{r=await jsonp(u,{action:'ping',key:$('tkey').value});}catch(e){add('no','Second call failed',e.message);return;}
